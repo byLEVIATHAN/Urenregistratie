@@ -30,13 +30,14 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- DB Knop: Alleen zichtbaar voor Admin -->
+        <!-- DB Knop: Uitsluitend zichtbaar voor Admin -->
         <button id="admin-db-btn" onclick="openConfigModal()" class="hidden px-3 py-1.5 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg border border-slate-600 flex items-center gap-1.5 transition">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Database
         </button>
 
-        <button onclick="openUserModal()" class="flex items-center gap-2 bg-slate-700/60 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-600 transition">
+        <!-- Gebruikersknop -->
+        <button id="user-menu-btn" onclick="openUserModal()" class="flex items-center gap-2 bg-slate-700/60 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-600 transition cursor-pointer">
           <div class="w-6 h-6 rounded-full bg-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-xs" id="nav-user-avatar">B</div>
           <span class="text-sm font-semibold text-slate-200" id="nav-user-name">Beheerder</span>
           <span class="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase" id="nav-user-role">Admin</span>
@@ -366,10 +367,22 @@
     let currentViewMode = 'cal';
 
     window.addEventListener('DOMContentLoaded', async () => {
+      // 1. Eerst lokaal actieve gebruiker direct herstellen
+      const savedUserId = localStorage.getItem('current_user_id');
+      const storedEmps = localStorage.getItem('local_employees');
+      if (storedEmps) {
+        employees = JSON.parse(storedEmps);
+      }
+      if (savedUserId) {
+        const found = employees.find(e => e.id === savedUserId);
+        if (found) currentEmployee = found;
+      }
+
       updateUserInterface();
       renderAllViews();
       startLiveTicker();
 
+      // 2. Cloud verbinding initialiseren
       initDatabase();
       await loadInitialData();
     });
@@ -413,6 +426,7 @@
           if (resShfs.data) shifts = resShfs.data;
           if (resTmrs.data) activeTimers = resTmrs.data;
 
+          persistLocal();
         } catch (e) {
           console.warn("Cloud data niet bereikbaar, draait lokaal", e);
           loadLocalStorageData();
@@ -421,9 +435,13 @@
         loadLocalStorageData();
       }
 
+      // Respecteer altijd de opgeslagen gebruiker
       const savedUserId = localStorage.getItem('current_user_id');
-      currentEmployee = employees.find(e => e.id === savedUserId) || employees[0];
-      
+      if (savedUserId) {
+        const match = employees.find(e => e.id === savedUserId);
+        if (match) currentEmployee = match;
+      }
+
       updateUserInterface();
       renderAllViews();
     }
@@ -939,36 +957,56 @@
       renderAllViews();
     }
 
+    // -------------------------------------------------------------
+    // HERZIENE GEBRUIKERS SELECTIE EN SWITCH LOGICA
+    // -------------------------------------------------------------
     function openUserModal() {
       const list = document.getElementById('employee-selection-list');
-      list.innerHTML = employees.map(e => `
-        <div onclick="requestUserSwitch('${e.id}')" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-700/60 hover:border-indigo-500/60 bg-slate-900/40 hover:bg-slate-700/40 cursor-pointer transition">
-          <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs">${e.name.charAt(0)}</div>
-            <div>
-              <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                ${e.name}
-                ${e.role === 'admin' ? '<span class="text-[10px] text-indigo-400">🔒</span>' : ''}
+      list.innerHTML = employees.map(e => {
+        const isSelected = currentEmployee && e.id === currentEmployee.id;
+        return `
+          <div onclick="requestUserSwitch('${e.id}')" class="flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-indigo-500 bg-indigo-950/30' : 'border-slate-700/60 bg-slate-900/40'} hover:border-indigo-500/60 hover:bg-slate-700/40 cursor-pointer transition">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs">${e.name.charAt(0)}</div>
+              <div>
+                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                  ${e.name}
+                  ${e.role === 'admin' ? '<span class="text-[10px] text-indigo-400">🔒</span>' : ''}
+                </div>
+                <div class="text-[10px] text-slate-400">${e.role === 'admin' ? 'Beheerder' : 'Medewerker'}</div>
               </div>
-              <div class="text-[10px] text-slate-400">${e.role === 'admin' ? 'Beheerder' : 'Medewerker'}</div>
             </div>
+            ${isSelected ? '<span class="text-xs text-indigo-400 font-bold">Geselecteerd</span>' : ''}
           </div>
-          ${e.id === currentEmployee.id ? '<span class="text-xs text-indigo-400 font-bold">Geselecteerd</span>' : ''}
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
       document.getElementById('modal-user').classList.remove('hidden');
     }
-    function closeUserModal() { document.getElementById('modal-user').classList.add('hidden'); }
+
+    function closeUserModal() { 
+      document.getElementById('modal-user').classList.add('hidden'); 
+    }
 
     function requestUserSwitch(id) {
       const target = employees.find(e => e.id === id);
       if (!target) return;
 
-      if (target.role === 'admin' && currentEmployee.id !== target.id) {
+      // Als je al die gebruiker bent, sluit modal gewoon
+      if (currentEmployee && currentEmployee.id === target.id) {
+        closeUserModal();
+        return;
+      }
+
+      // Als het doel een Admin is, vraag altijd om de pincode
+      if (target.role === 'admin') {
         pendingTargetUserId = id;
         document.getElementById('input-admin-pin').value = '';
+        closeUserModal();
         document.getElementById('modal-pin-prompt').classList.remove('hidden');
+        setTimeout(() => document.getElementById('input-admin-pin').focus(), 100);
       } else {
+        // Direct switchen naar medewerker zonder pincode
         applyUserSwitch(id);
       }
     }
@@ -986,17 +1024,23 @@
       const validPin = target.pin || '0000';
 
       if (enteredPin === validPin) {
+        const idToApply = pendingTargetUserId;
         closePinPromptModal();
-        applyUserSwitch(pendingTargetUserId);
+        applyUserSwitch(idToApply);
       } else {
         alert("Onjuiste pincode. Probeer het opnieuw.");
         document.getElementById('input-admin-pin').value = '';
+        document.getElementById('input-admin-pin').focus();
       }
     }
 
     function applyUserSwitch(id) {
-      currentEmployee = employees.find(e => e.id === id);
+      const target = employees.find(e => e.id === id);
+      if (!target) return;
+
+      currentEmployee = target;
       localStorage.setItem('current_user_id', id);
+
       closeUserModal();
       updateUserInterface();
       renderAllViews();
