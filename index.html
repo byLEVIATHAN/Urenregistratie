@@ -30,7 +30,7 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- DB Knop: Uitsluitend zichtbaar voor Admin -->
+        <!-- DB Knop: Alleen zichtbaar voor Admin -->
         <button id="admin-db-btn" onclick="openConfigModal()" class="hidden px-3 py-1.5 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg border border-slate-600 flex items-center gap-1.5 transition">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           Database
@@ -49,8 +49,6 @@
 
     <!-- Medewerker weergave: Prikklok -->
     <div id="employee-view" class="space-y-6">
-      
-      <!-- Prikklok Card -->
       <div class="bg-gradient-to-br from-slate-800 to-slate-800/60 border border-slate-700/80 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div class="flex flex-col md:flex-row items-center justify-between gap-6">
           <div class="text-center md:text-left">
@@ -137,7 +135,6 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <!-- Kalender / Lijst knoppen -->
           <div class="bg-slate-700/80 p-0.5 rounded-lg border border-slate-600 flex items-center">
             <button id="view-mode-cal" onclick="switchViewMode('cal')" class="px-3 py-1 text-xs font-semibold rounded-md bg-indigo-600 text-white transition flex items-center gap-1.5">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -202,7 +199,7 @@
     </div>
   </main>
 
-  <!-- MODAL: Database Configuratie (Admin) -->
+  <!-- MODAL: Database Configuratie -->
   <div id="modal-config" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
       <h3 class="text-base font-bold text-white mb-2">Supabase Cloud Database</h3>
@@ -214,7 +211,7 @@
           <input type="text" id="cfg-supabase-url" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">API Key</label>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Anon / API Key</label>
           <input type="text" id="cfg-supabase-key" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono">
         </div>
       </div>
@@ -241,7 +238,6 @@
       
       <div id="employee-selection-list" class="space-y-2 max-h-60 overflow-y-auto mb-4 pr-1"></div>
       
-      <!-- Teamlid toevoegen alleen voor Admin -->
       <div id="admin-add-employee-section" class="hidden border-t border-slate-700 pt-4">
         <h4 class="text-xs font-bold text-slate-300 mb-2">Nieuw Teamlid Toevoegen</h4>
         <div class="grid grid-cols-2 gap-2 mb-2">
@@ -359,7 +355,6 @@
     let supabaseClient = null;
     let isCloud = false;
 
-    // Direct een werkende beheerder als fallback zodat hij nooit op Laden kan blijven staan
     let currentEmployee = { id: 'emp_admin', name: 'Beheerder', role: 'admin', rate: 20.0, pin: '0000', active: true };
     let employees = [currentEmployee];
     let shifts = [];
@@ -371,12 +366,10 @@
     let currentViewMode = 'cal';
 
     window.addEventListener('DOMContentLoaded', async () => {
-      // Direct UI tonen met standaard beheerder
       updateUserInterface();
       renderAllViews();
       startLiveTicker();
 
-      // Start Cloud verbinding op de achtergrond
       initDatabase();
       await loadInitialData();
     });
@@ -390,7 +383,7 @@
           supabaseClient = window.supabase.createClient(savedUrl, savedKey);
           isCloud = true;
         } catch (e) {
-          console.warn("Supabase init gefaald, blijft lokaal", e);
+          console.warn("Supabase init gefaald", e);
           isCloud = false;
         }
       } else {
@@ -398,7 +391,6 @@
       }
     }
 
-    // Veilige ophaalfunctie met een strikte timeout van 2,5 sec
     async function loadInitialData() {
       if (isCloud && supabaseClient) {
         try {
@@ -422,7 +414,7 @@
           if (resTmrs.data) activeTimers = resTmrs.data;
 
         } catch (e) {
-          console.warn("Cloud data niet bereikbaar, draait op lokale data.", e);
+          console.warn("Cloud data niet bereikbaar, draait lokaal", e);
           loadLocalStorageData();
         }
       } else {
@@ -644,7 +636,7 @@
         if (diffMinutes >= 270) breakMin = 30;
 
         const newShift = {
-          id: 'shf_' + Date.now(),
+          id: 'shf_' + String(Date.now()),
           employee_id: currentEmployee.id,
           employee_name: currentEmployee.name,
           start_time: active.start_time,
@@ -656,10 +648,9 @@
         };
 
         if (isCloud && supabaseClient) {
-          try {
-            await supabaseClient.from('shifts').insert([newShift]);
-            await supabaseClient.from('active_timers').delete().eq('employee_id', currentEmployee.id);
-          } catch(e) {}
+          const { error: insErr } = await supabaseClient.from('shifts').insert([newShift]);
+          if (insErr) alert("Fout bij opslaan dienst: " + insErr.message);
+          await supabaseClient.from('active_timers').delete().eq('employee_id', currentEmployee.id);
         }
 
         shifts.unshift(newShift);
@@ -676,9 +667,8 @@
         };
 
         if (isCloud && supabaseClient) {
-          try {
-            await supabaseClient.from('active_timers').insert([timerData]);
-          } catch(e) {}
+          const { error: tmrErr } = await supabaseClient.from('active_timers').insert([timerData]);
+          if (tmrErr) alert("Fout bij starten timer: " + tmrErr.message);
         }
 
         activeTimers.push(timerData);
@@ -848,7 +838,7 @@
       shift.status = 'approved_emp';
 
       if (isCloud && supabaseClient) {
-        try { await supabaseClient.from('shifts').update({ status: 'approved_emp' }).eq('id', id); } catch(e) {}
+        await supabaseClient.from('shifts').update({ status: 'approved_emp' }).eq('id', id);
       }
       persistLocal();
       renderAllViews();
@@ -861,7 +851,7 @@
       shift.status = 'approved_admin';
 
       if (isCloud && supabaseClient) {
-        try { await supabaseClient.from('shifts').update({ status: 'approved_admin' }).eq('id', id); } catch(e) {}
+        await supabaseClient.from('shifts').update({ status: 'approved_admin' }).eq('id', id);
       }
       persistLocal();
       renderAllViews();
@@ -876,7 +866,7 @@
       shifts = shifts.filter(s => s.id !== id);
 
       if (isCloud && supabaseClient) {
-        try { await supabaseClient.from('shifts').delete().eq('id', id); } catch(e) {}
+        await supabaseClient.from('shifts').delete().eq('id', id);
       }
       persistLocal();
       renderAllViews();
@@ -924,7 +914,7 @@
       const endTime = new Date(`${date}T${end}`).toISOString();
 
       const newShift = {
-        id: 'shf_' + Date.now(),
+        id: 'shf_' + String(Date.now()),
         employee_id: targetEmployee.id,
         employee_name: targetEmployee.name,
         start_time: startTime,
@@ -936,7 +926,11 @@
       };
 
       if (isCloud && supabaseClient) {
-        try { await supabaseClient.from('shifts').insert([newShift]); } catch(e) {}
+        const { error: insErr } = await supabaseClient.from('shifts').insert([newShift]);
+        if (insErr) {
+          alert("Supabase Fout bij shift: " + insErr.message);
+          return;
+        }
       }
 
       shifts.unshift(newShift);
@@ -1032,7 +1026,8 @@
       currentEmployee.pin = next;
 
       if (isCloud && supabaseClient) {
-        try { await supabaseClient.from('employees').update({ pin: next }).eq('id', currentEmployee.id); } catch(e) {}
+        const { error: pinErr } = await supabaseClient.from('employees').update({ pin: next }).eq('id', currentEmployee.id);
+        if (pinErr) return alert("Fout bij bijwerken pin: " + pinErr.message);
       }
       persistLocal();
       closeChangePinModal();
@@ -1051,13 +1046,13 @@
       if (confirmation.trim().toLowerCase() === configuredUrl.trim().toLowerCase()) {
         target.pin = '0000';
         if (isCloud && supabaseClient) {
-          try { await supabaseClient.from('employees').update({ pin: '0000' }).eq('id', target.id); } catch(e) {}
+          await supabaseClient.from('employees').update({ pin: '0000' }).eq('id', target.id);
         }
         persistLocal();
         alert("Pincode is succesvol gereset naar: 0000");
         closePinPromptModal();
       } else {
-        alert("Verificatie mislukt. De ingevoerde Project URL komt niet overeen.");
+        alert("Verificatie mislukt. De ingevoerde URL komt niet overeen.");
       }
     }
 
@@ -1067,14 +1062,18 @@
         return;
       }
 
-      const name = document.getElementById('new-emp-name').value.trim();
-      const rate = parseFloat(document.getElementById('new-emp-rate').value) || 14.50;
-      const isAdmin = document.getElementById('new-emp-admin').checked;
+      const nameInput = document.getElementById('new-emp-name');
+      const rateInput = document.getElementById('new-emp-rate');
+      const adminInput = document.getElementById('new-emp-admin');
+
+      const name = nameInput.value.trim();
+      const rate = parseFloat(rateInput.value) || 14.50;
+      const isAdmin = adminInput.checked;
 
       if (!name) return alert("Vul een naam in.");
 
       const newEmp = {
-        id: 'emp_' + Date.now(),
+        id: 'emp_' + String(Date.now()),
         name: name,
         role: isAdmin ? 'admin' : 'employee',
         rate: rate,
@@ -1083,15 +1082,24 @@
       };
 
       if (isCloud && supabaseClient) {
-        try { await supabaseClient.from('employees').insert([newEmp]); } catch(e) {}
+        const { error } = await supabaseClient.from('employees').insert([newEmp]);
+        if (error) {
+          alert("Supabase Fout: " + error.message + " (Code: " + error.code + ")");
+          return;
+        }
       }
 
       employees.push(newEmp);
       persistLocal();
-      document.getElementById('new-emp-name').value = '';
+
+      nameInput.value = '';
+      rateInput.value = '';
+      adminInput.checked = false;
+
       openUserModal();
       renderEmployeeFilter();
       renderAdminDashboard();
+      alert("Medewerker succesvol opgeslagen in de cloud!");
     }
 
     function openConfigModal() {
