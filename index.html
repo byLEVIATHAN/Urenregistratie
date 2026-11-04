@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Urenregistratie</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printable-area, #printable-area * { visibility: visible; }
+      #printable-area { position: absolute; left: 0; top: 0; width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased pb-12">
+
+  <!-- Navigatiebalk -->
+  <header class="bg-slate-800/90 border-b border-slate-700/80 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white text-lg shadow-md shadow-indigo-500/20">W</div>
+        <div>
+          <h1 class="font-bold text-white text-base tracking-tight leading-none">WorkFlow Pro</h1>
+          <span id="cloud-badge" class="hidden inline-flex items-center gap-1.5 text-[11px] font-medium"></span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- DB Knop: Uitsluitend zichtbaar voor Admin -->
+        <button id="admin-db-btn" onclick="openConfigModal()" class="hidden px-3 py-1.5 text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg border border-slate-600 flex items-center gap-1.5 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Database
+        </button>
+
+        <!-- Gebruikersmenu knop -->
+        <button id="user-menu-btn" onclick="openUserModal()" class="flex items-center gap-2 bg-slate-700/60 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-600 transition cursor-pointer">
+          <div class="w-6 h-6 rounded-full bg-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold text-xs" id="nav-user-avatar">B</div>
+          <span class="text-sm font-semibold text-slate-200" id="nav-user-name">Beheerder</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase" id="nav-user-role">Admin</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 mt-6">
+
+    <!-- Medewerker weergave: Prikklok -->
+    <div id="employee-view" class="space-y-6">
+      <div class="bg-gradient-to-br from-slate-800 to-slate-800/60 border border-slate-700/80 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="text-center md:text-left">
+            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Prikklok</span>
+            <div id="timer-display" class="text-5xl font-mono font-bold text-white tracking-tight mt-1">00:00:00</div>
+            <p id="timer-status-text" class="text-xs text-slate-400 mt-1">Klaar om in te klokken</p>
+          </div>
+
+          <div class="flex items-center gap-3 w-full md:w-auto">
+            <button id="clock-btn" onclick="toggleClock()" class="flex-1 md:flex-none px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl shadow-lg shadow-emerald-600/20 text-white transition flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Inklokken
+            </button>
+            <button onclick="openShiftModal()" class="px-4 py-3.5 bg-indigo-600 hover:bg-indigo-500 font-semibold rounded-xl text-white transition text-sm flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Uren Invoeren
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Medewerker Dashboard Statistieken -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Uren gewerkt</span>
+          <div class="text-2xl font-bold text-white mt-1" id="stat-emp-hours">0.0 u</div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Uurtarief</span>
+          <div class="text-2xl font-bold text-indigo-400 mt-1" id="stat-emp-rate">€ 0.00</div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Verdiensten</span>
+          <div class="text-2xl font-bold text-emerald-400 mt-1" id="stat-emp-earnings">€ 0.00</div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Diensten</span>
+          <div class="text-2xl font-bold text-amber-400 mt-1" id="stat-emp-shifts">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beheerder Dashboard (Verborgen voor medewerkers) -->
+    <div id="admin-view" class="space-y-6 hidden mt-6">
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300">Nu Actief op de Werkvloer</h2>
+          </div>
+          <span class="text-xs text-slate-400" id="live-count">0 actieve medewerkers</span>
+        </div>
+        <div id="live-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="text-xs text-slate-500 py-3">Momenteel is niemand ingeklokt.</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Totaal Team Uren</span>
+          <div class="text-2xl font-bold text-white mt-1" id="stat-admin-hours">0.0 u</div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Totale Loonkosten</span>
+          <div class="text-2xl font-bold text-emerald-400 mt-1" id="stat-admin-cost">€ 0.00</div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Nog te accorderen</span>
+          <div class="text-2xl font-bold text-amber-400 mt-1" id="stat-admin-pending">0</div>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700/60 p-4 rounded-xl">
+          <span class="text-xs text-slate-400 font-medium">Teamleden</span>
+          <div class="text-2xl font-bold text-indigo-400 mt-1" id="stat-admin-team">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTIE: Kalender & Urenoverzicht -->
+    <div class="mt-8 bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 shadow-lg">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
+        <div>
+          <h2 class="text-base font-bold text-white">Overzicht & Urenhistorie</h2>
+          <p class="text-xs text-slate-400">Bekijk uren in de kalender of lijst, pas diensten aan en voer nieuwe uren in</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div class="bg-slate-700/80 p-0.5 rounded-lg border border-slate-600 flex items-center">
+            <button id="view-mode-cal" onclick="switchViewMode('cal')" class="px-3 py-1 text-xs font-semibold rounded-md bg-indigo-600 text-white transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              Kalender
+            </button>
+            <button id="view-mode-list" onclick="switchViewMode('list')" class="px-3 py-1 text-xs font-medium text-slate-300 hover:text-white transition flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+              Lijst
+            </button>
+          </div>
+
+          <select id="filter-employee" onchange="onFilterChange()" class="hidden bg-slate-700 border border-slate-600 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
+            <option value="all">Alle medewerkers</option>
+          </select>
+
+          <button id="btn-export-csv" onclick="exportCSV()" class="hidden px-3 py-1.5 text-xs font-semibold bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-slate-200 transition">
+            Export CSV
+          </button>
+          <button onclick="window.print()" class="px-3 py-1.5 text-xs font-semibold bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-slate-200 transition">
+            Print
+          </button>
+        </div>
+      </div>
+
+      <!-- 1. KALENDER WEERGAVE -->
+      <div id="calendar-container">
+        <div class="flex items-center justify-between bg-slate-900/40 p-3 rounded-xl border border-slate-700/60 mb-3">
+          <button onclick="prevMonth()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="text-sm font-bold text-white capitalize" id="calendar-month-label">Maand Jaar</div>
+          <button onclick="nextMonth()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400 mb-1">
+          <div>Ma</div><div>Di</div><div>Wo</div><div>Do</div><div>Vr</div><div>Za</div><div>Zo</div>
+        </div>
+        <div id="calendar-days-grid" class="grid grid-cols-7 gap-1.5"></div>
+        <p class="text-[11px] text-slate-500 mt-2 text-center">💡 Tik op een datum in de kalender om voor die dag uren in te voeren.</p>
+      </div>
+
+      <!-- 2. TABEL WEERGAVE -->
+      <div id="table-container" class="hidden overflow-x-auto" id="printable-area">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-400 border-b border-slate-700 uppercase tracking-wider text-[10px]">
+            <tr>
+              <th class="py-3 px-3">Medewerker</th>
+              <th class="py-3 px-3">Datum</th>
+              <th class="py-3 px-3">Tijden</th>
+              <th class="py-3 px-3">Pauze</th>
+              <th class="py-3 px-3">Netto</th>
+              <th class="py-3 px-3">Bedrag</th>
+              <th class="py-3 px-3">Status Verificatie</th>
+              <th class="py-3 px-3 text-right no-print">Acties</th>
+            </tr>
+          </thead>
+          <tbody id="shifts-tbody" class="divide-y divide-slate-700/50"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: Database Configuratie -->
+  <div id="modal-config" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <h3 class="text-base font-bold text-white mb-2">Supabase Cloud Database</h3>
+      <p class="text-xs text-slate-400 mb-4">Beheerderspaneel voor projectkoppeling.</p>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Project URL</label>
+          <input type="text" id="cfg-supabase-url" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Anon / API Key</label>
+          <input type="text" id="cfg-supabase-key" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 mt-6">
+        <button onclick="clearConfig()" class="px-3 py-2 text-xs font-semibold text-rose-400 hover:text-rose-300">Wissen</button>
+        <div class="flex gap-2">
+          <button onclick="closeConfigModal()" class="px-4 py-2 text-xs font-semibold bg-slate-700 rounded-xl text-slate-300">Annuleren</button>
+          <button onclick="saveConfig()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white">Verbinden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Gebruiker Selecteren -->
+  <div id="modal-user" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-white">Wissel van Medewerker</h3>
+        <button id="admin-change-pin-btn" onclick="openChangePinModal()" class="hidden text-xs text-indigo-400 hover:text-indigo-300 font-semibold underline">
+          Pincode Wijzigen
+        </button>
+      </div>
+      
+      <div id="employee-selection-list" class="space-y-2 max-h-60 overflow-y-auto mb-4 pr-1"></div>
+      
+      <div id="admin-add-employee-section" class="hidden border-t border-slate-700 pt-4">
+        <h4 class="text-xs font-bold text-slate-300 mb-2">Nieuw Teamlid Toevoegen</h4>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <input type="text" id="new-emp-name" placeholder="Naam medewerker" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+          <input type="number" step="0.25" id="new-emp-rate" placeholder="Uurloon (€)" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+        </div>
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-xs text-slate-400">
+            <input type="checkbox" id="new-emp-admin" class="rounded bg-slate-900 border-slate-700 text-indigo-600"> Beheerder (Admin)
+          </label>
+          <button onclick="addNewEmployee()" class="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white">+ Toevoegen</button>
+        </div>
+      </div>
+
+      <div class="mt-5 text-right">
+        <button onclick="closeUserModal()" class="px-4 py-1.5 text-xs font-semibold bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200">Sluiten</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Pincode Invoeren voor Beheerder -->
+  <div id="modal-pin-prompt" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center">
+      <div class="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </div>
+      <h3 class="text-base font-bold text-white mb-1">Beheerders Pincode</h3>
+      <p class="text-xs text-slate-400 mb-4">Voer de 4-cijferige pincode in (Standaard: 0000).</p>
+      
+      <input type="password" id="input-admin-pin" maxlength="4" placeholder="••••" class="w-32 mx-auto text-center tracking-widest text-2xl font-bold bg-slate-900 border border-slate-700 rounded-xl py-2 text-white focus:outline-none focus:border-indigo-500 mb-4">
+      
+      <div class="flex justify-center gap-2">
+        <button onclick="closePinPromptModal()" class="px-4 py-2 text-xs font-medium bg-slate-700 rounded-xl text-slate-300">Annuleren</button>
+        <button onclick="verifyAdminPin()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white">Bevestigen</button>
+      </div>
+
+      <div class="mt-4 border-t border-slate-700/60 pt-3">
+        <button onclick="promptResetPin()" class="text-[11px] text-slate-500 hover:text-rose-400 underline transition">
+          Pincode vergeten? Resetten
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Pincode Wijzigen -->
+  <div id="modal-change-pin" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+      <h3 class="text-base font-bold text-white mb-2">Nieuwe Pincode Kiezen</h3>
+      <p class="text-xs text-slate-400 mb-4">Stel een 4-cijferige pincode in voor het beheerderaccount.</p>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Huidige pincode</label>
+          <input type="password" id="pin-current" maxlength="4" placeholder="••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-center tracking-widest text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Nieuwe 4-cijferige pincode</label>
+          <input type="password" id="pin-new" maxlength="4" placeholder="••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-center tracking-widest text-white">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-5">
+        <button onclick="closeChangePinModal()" class="px-4 py-2 text-xs font-medium bg-slate-700 rounded-xl text-slate-300">Annuleren</button>
+        <button onclick="saveNewAdminPin()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Shift Invoer / Bewerken -->
+  <div id="modal-shift" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <h3 class="text-base font-bold text-white mb-1" id="shift-modal-title">Dienst Invoeren</h3>
+      <p class="text-xs text-slate-400 mb-4" id="shift-modal-subtitle">Voer uren in voor vandaag of een eerdere datum.</p>
+      
+      <input type="hidden" id="editing-shift-id" value="">
+
+      <div class="space-y-3">
+        <div id="shift-for-employee-container" class="hidden">
+          <label class="block text-xs font-medium text-slate-300 mb-1">Voor medewerker</label>
+          <select id="man-emp-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Datum</label>
+          <input type="date" id="man-date" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Begintijd</label>
+            <input type="time" id="man-start" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Eindtijd</label>
+            <input type="time" id="man-end" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Pauze (minuten)</label>
+          <input type="number" id="man-break" value="30" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Notitie / Werkzaamheden</label>
+          <input type="text" id="man-notes" placeholder="Bijv. Balie, reparaties" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button onclick="closeShiftModal()" class="px-4 py-2 text-xs font-medium bg-slate-700 rounded-xl text-slate-300">Annuleren</button>
+        <button onclick="submitManualShift()" id="shift-modal-submit-btn" class="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 rounded-xl text-white">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_SUPABASE_URL = "https://dzxwmljskmlquqnhidlc.supabase.co";
+    const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6eHdtbGpza21scXVxbmhpZGxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3MzczMzQsImV4cCI6MjEwOTMxMzMzNH0.h7gcJNeGojA-LDsEsqKgtAvvlCNlHpL8zWvxnP6uVXE";
+
+    let supabaseClient = null;
+    let isCloud = false;
+
+    let currentEmployee = { id: 'emp_admin', name: 'Beheerder', role: 'admin', rate: 20.0, pin: '0000', active: true };
+    let employees = [currentEmployee];
+    let shifts = [];
+    let activeTimers = [];
+    let timerInterval = null;
+
+    let pendingTargetUserId = null;
+    let currentCalDate = new Date();
+    let currentViewMode = 'cal';
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const savedUserId = localStorage.getItem('current_user_id');
+      const storedEmps = localStorage.getItem('local_employees');
+      if (storedEmps) {
+        employees = JSON.parse(storedEmps);
+      }
+      if (savedUserId) {
+        const found = employees.find(e => e.id === savedUserId);
+        if (found) currentEmployee = found;
+      }
+
+      updateUserInterface();
+      renderAllViews();
+      startLiveTicker();
+
+      initDatabase();
+      await loadInitialData();
+    });
+
+    function initDatabase() {
+      const savedUrl = localStorage.getItem('sb_url') || DEFAULT_SUPABASE_URL;
+      const savedKey = localStorage.getItem('sb_key') || DEFAULT_SUPABASE_KEY;
+
+      if (savedUrl && savedKey && window.supabase) {
+        try {
+          supabaseClient = window.supabase.createClient(savedUrl, savedKey);
+          isCloud = true;
+        } catch (e) {
+          console.warn("Supabase init gefaald", e);
+          isCloud = false;
+        }
+      } else {
+        isCloud = false;
+      }
+    }
+
+    async function loadInitialData() {
+      if (isCloud && supabaseClient) {
+        try {
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500));
+          
+          const fetchPromise = Promise.all([
+            supabaseClient.from('employees').select('*').order('name'),
+            supabaseClient.from('shifts').select('*').order('start_time', { ascending: false }),
+            supabaseClient.from('active_timers').select('*')
+          ]);
+
+          const [resEmps, resShfs, resTmrs] = await Promise.race([fetchPromise, timeoutPromise]);
+
+          if (resEmps.data && resEmps.data.length > 0) {
+            employees = resEmps.data;
+          } else if (resEmps.data && resEmps.data.length === 0) {
+            await supabaseClient.from('employees').insert([currentEmployee]);
+          }
+
+          if (resShfs.data) shifts = resShfs.data;
+          if (resTmrs.data) activeTimers = resTmrs.data;
+
+          persistLocal();
+        } catch (e) {
+          console.warn("Cloud data niet bereikbaar, draait lokaal", e);
+          loadLocalStorageData();
+        }
+      } else {
+        loadLocalStorageData();
+      }
+
+      const savedUserId = localStorage.getItem('current_user_id');
+      if (savedUserId) {
+        const match = employees.find(e => e.id === savedUserId);
+        if (match) currentEmployee = match;
+      }
+
+      updateUserInterface();
+      renderAllViews();
+    }
+
+    function loadLocalStorageData() {
+      const storedEmps = localStorage.getItem('local_employees');
+      if (storedEmps) employees = JSON.parse(storedEmps);
+      const storedShifts = localStorage.getItem('local_shifts');
+      if (storedShifts) shifts = JSON.parse(storedShifts);
+      const storedTimers = localStorage.getItem('local_timers');
+      if (storedTimers) activeTimers = JSON.parse(storedTimers);
+    }
+
+    function updateUserInterface() {
+      if (!currentEmployee) return;
+
+      document.getElementById('nav-user-name').innerText = currentEmployee.name;
+      document.getElementById('nav-user-avatar').innerText = currentEmployee.name.charAt(0).toUpperCase();
+      
+      const roleBadge = document.getElementById('nav-user-role');
+      const adminDbBtn = document.getElementById('admin-db-btn');
+      const cloudBadge = document.getElementById('cloud-badge');
+      const adminView = document.getElementById('admin-view');
+      const filterEmp = document.getElementById('filter-employee');
+      const btnExport = document.getElementById('btn-export-csv');
+      const addEmpSection = document.getElementById('admin-add-employee-section');
+      const changePinBtn = document.getElementById('admin-change-pin-btn');
+
+      if (currentEmployee.role === 'admin') {
+        roleBadge.innerText = 'Admin';
+        roleBadge.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase bg-indigo-500/20 text-indigo-300';
+        adminDbBtn.classList.remove('hidden');
+        adminView.classList.remove('hidden');
+        filterEmp.classList.remove('hidden');
+        btnExport.classList.remove('hidden');
+        addEmpSection.classList.remove('hidden');
+        changePinBtn.classList.remove('hidden');
+
+        cloudBadge.classList.remove('hidden');
+        if (isCloud) {
+          cloudBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Cloud Actief`;
+          cloudBadge.className = "inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium";
+        } else {
+          cloudBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> Lokaal`;
+          cloudBadge.className = "inline-flex items-center gap-1.5 text-[11px] text-amber-400 font-medium";
+        }
+      } else {
+        roleBadge.innerText = 'Medewerker';
+        roleBadge.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase bg-slate-700 text-slate-300';
+        adminDbBtn.classList.add('hidden');
+        cloudBadge.classList.add('hidden');
+        adminView.classList.add('hidden');
+        filterEmp.classList.add('hidden');
+        btnExport.classList.add('hidden');
+        addEmpSection.classList.add('hidden');
+        changePinBtn.classList.add('hidden');
+      }
+
+      updateClockButtonState();
+      calculateEmployeeStats();
+      renderEmployeeFilter();
+    }
+
+    function renderAllViews() {
+      renderShiftsTable();
+      renderCalendar();
+      if (currentEmployee && currentEmployee.role === 'admin') renderAdminDashboard();
+      calculateEmployeeStats();
+    }
+
+    function onFilterChange() {
+      renderShiftsTable();
+      renderCalendar();
+    }
+
+    function switchViewMode(mode) {
+      currentViewMode = mode;
+      const btnCal = document.getElementById('view-mode-cal');
+      const btnList = document.getElementById('view-mode-list');
+      const conCal = document.getElementById('calendar-container');
+      const conList = document.getElementById('table-container');
+
+      if (mode === 'cal') {
+        btnCal.className = "px-3 py-1 text-xs font-semibold rounded-md bg-indigo-600 text-white transition flex items-center gap-1.5";
+        btnList.className = "px-3 py-1 text-xs font-medium text-slate-300 hover:text-white transition flex items-center gap-1.5";
+        conCal.classList.remove('hidden');
+        conList.classList.add('hidden');
+        renderCalendar();
+      } else {
+        btnList.className = "px-3 py-1 text-xs font-semibold rounded-md bg-indigo-600 text-white transition flex items-center gap-1.5";
+        btnCal.className = "px-3 py-1 text-xs font-medium text-slate-300 hover:text-white transition flex items-center gap-1.5";
+        conList.classList.remove('hidden');
+        conCal.classList.add('hidden');
+        renderShiftsTable();
+      }
+    }
+
+    function prevMonth() {
+      currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+      renderCalendar();
+    }
+
+    function nextMonth() {
+      currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const year = currentCalDate.getFullYear();
+      const month = currentCalDate.getMonth();
+      const monthNames = ["Januari", "Februari", "Maart", "April", "Mei", "Juni", "Juli", "Augustus", "September", "Oktober", "November", "December"];
+      document.getElementById('calendar-month-label').innerText = `${monthNames[month]} ${year}`;
+
+      const grid = document.getElementById('calendar-days-grid');
+      grid.innerHTML = '';
+
+      const firstDayOfMonth = new Date(year, month, 1);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      let startingDay = firstDayOfMonth.getDay() - 1;
+      if (startingDay === -1) startingDay = 6;
+
+      const filter = document.getElementById('filter-employee').value;
+      let relevantShifts = shifts;
+      if (currentEmployee.role !== 'admin') {
+        relevantShifts = relevantShifts.filter(s => s.employee_id === currentEmployee.id);
+      } else if (filter !== 'all') {
+        relevantShifts = relevantShifts.filter(s => s.employee_id === filter);
+      }
+
+      for (let i = 0; i < startingDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = "h-20 bg-slate-900/20 rounded-xl border border-slate-800/40 opacity-30";
+        grid.appendChild(emptyCell);
+      }
+
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayShifts = relevantShifts.filter(s => s.start_time.startsWith(dateStr));
+        
+        let totalNetHours = 0;
+        dayShifts.forEach(s => {
+          const dur = (new Date(s.end_time) - new Date(s.start_time)) / 60000;
+          totalNetHours += Math.max(0, dur - (s.break_minutes || 0)) / 60;
+        });
+
+        const isToday = isCurrentMonth && today.getDate() === day;
+        const cell = document.createElement('div');
+        cell.className = `h-20 p-1.5 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between ${
+          isToday ? 'bg-indigo-950/40 border-indigo-500/60 shadow-sm shadow-indigo-500/20' : 'bg-slate-900/60 border-slate-700/60 hover:border-slate-500'
+        }`;
+        
+        cell.onclick = () => openShiftModal(dateStr);
+
+        let badgeHtml = '';
+        if (totalNetHours > 0) {
+          badgeHtml = `
+            <div class="mt-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded px-1 py-0.5 text-[10px] font-bold text-center">
+              ${totalNetHours.toFixed(1)} u
+            </div>
+          `;
+        }
+
+        cell.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold ${isToday ? 'text-indigo-400' : 'text-slate-300'}">${day}</span>
+            ${dayShifts.length > 1 ? `<span class="text-[9px] text-slate-500">${dayShifts.length}x</span>` : ''}
+          </div>
+          <div>${badgeHtml}</div>
+        `;
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function updateClockButtonState() {
+      const active = activeTimers.find(t => t.employee_id === currentEmployee.id);
+      const btn = document.getElementById('clock-btn');
+      const statusText = document.getElementById('timer-status-text');
+
+      if (active) {
+        btn.innerHTML = `
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+          Uitklokken
+        `;
+        btn.className = "flex-1 md:flex-none px-6 py-3.5 bg-rose-600 hover:bg-rose-500 font-bold rounded-xl shadow-lg shadow-rose-600/20 text-white transition flex items-center justify-center gap-2";
+        statusText.innerText = `Ingeklokt sinds ${new Date(active.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+      } else {
+        btn.innerHTML = `
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Inklokken
+        `;
+        btn.className = "flex-1 md:flex-none px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl shadow-lg shadow-emerald-600/20 text-white transition flex items-center justify-center gap-2";
+        statusText.innerText = "Klaar om in te klokken";
+        document.getElementById('timer-display').innerText = "00:00:00";
+      }
+    }
+
+    async function toggleClock() {
+      const activeIndex = activeTimers.findIndex(t => t.employee_id === currentEmployee.id);
+
+      if (activeIndex > -1) {
+        const active = activeTimers[activeIndex];
+        const endTime = new Date().toISOString();
+        const diffMinutes = Math.floor((new Date(endTime) - new Date(active.start_time)) / 60000);
+        let breakMin = 0;
+        if (diffMinutes >= 270) breakMin = 30;
+
+        const newShift = {
+          id: 'shf_' + String(Date.now()),
+          employee_id: currentEmployee.id,
+          employee_name: currentEmployee.name,
+          start_time: active.start_time,
+          end_time: endTime,
+          break_minutes: breakMin,
+          hourly_rate: currentEmployee.rate,
+          notes: active.notes || 'Prikklok shift',
+          status: 'pending'
+        };
+
+        if (isCloud && supabaseClient) {
+          const { error: insErr } = await supabaseClient.from('shifts').insert([newShift]);
+          if (insErr) alert("Fout bij opslaan dienst: " + insErr.message);
+          await supabaseClient.from('active_timers').delete().eq('employee_id', currentEmployee.id);
+        }
+
+        shifts.unshift(newShift);
+        activeTimers.splice(activeIndex, 1);
+        persistLocal();
+
+      } else {
+        const timerData = {
+          employee_id: currentEmployee.id,
+          employee_name: currentEmployee.name,
+          start_time: new Date().toISOString(),
+          hourly_rate: currentEmployee.rate,
+          notes: ''
+        };
+
+        if (isCloud && supabaseClient) {
+          const { error: tmrErr } = await supabaseClient.from('active_timers').insert([timerData]);
+          if (tmrErr) alert("Fout bij starten timer: " + tmrErr.message);
+        }
+
+        activeTimers.push(timerData);
+        persistLocal();
+      }
+
+      updateClockButtonState();
+      renderAllViews();
+    }
+
+    function startLiveTicker() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!currentEmployee) return;
+        const active = activeTimers.find(t => t.employee_id === currentEmployee.id);
+        if (active) {
+          const diffMs = new Date() - new Date(active.start_time);
+          const totalSec = Math.floor(diffMs / 1000);
+          const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+          const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+          const secs = String(totalSec % 60).padStart(2, '0');
+          document.getElementById('timer-display').innerText = `${hrs}:${mins}:${secs}`;
+        }
+      }, 1000);
+    }
+
+    function calculateEmployeeStats() {
+      if (!currentEmployee) return;
+      const empShifts = shifts.filter(s => s.employee_id === currentEmployee.id);
+      let totalMinutes = 0;
+
+      empShifts.forEach(s => {
+        const dur = (new Date(s.end_time) - new Date(s.start_time)) / 60000;
+        totalMinutes += Math.max(0, dur - (s.break_minutes || 0));
+      });
+
+      const hours = (totalMinutes / 60).toFixed(1);
+      const earnings = (parseFloat(hours) * currentEmployee.rate).toFixed(2);
+
+      document.getElementById('stat-emp-hours').innerText = `${hours} u`;
+      document.getElementById('stat-emp-rate').innerText = `€ ${parseFloat(currentEmployee.rate).toFixed(2)}`;
+      document.getElementById('stat-emp-earnings').innerText = `€ ${earnings}`;
+      document.getElementById('stat-emp-shifts').innerText = empShifts.length;
+    }
+
+    function renderAdminDashboard() {
+      const liveGrid = document.getElementById('live-grid');
+      document.getElementById('live-count').innerText = `${activeTimers.length} actief`;
+
+      if (activeTimers.length === 0) {
+        liveGrid.innerHTML = `<div class="text-xs text-slate-500 py-2">Momenteel is niemand ingeklokt.</div>`;
+      } else {
+        liveGrid.innerHTML = activeTimers.map(t => {
+          const start = new Date(t.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          return `
+            <div class="bg-slate-900/60 border border-slate-700 p-3 rounded-xl flex items-center justify-between">
+              <div>
+                <div class="text-xs font-bold text-slate-200">${t.employee_name}</div>
+                <div class="text-[11px] text-emerald-400">Ingeklokt om ${start}</div>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      let totalMins = 0;
+      let totalCost = 0;
+      let pendingCount = 0;
+
+      shifts.forEach(s => {
+        const dur = (new Date(s.end_time) - new Date(s.start_time)) / 60000;
+        const net = Math.max(0, dur - (s.break_minutes || 0));
+        const hrs = net / 60;
+        totalMins += net;
+        totalCost += (hrs * (s.hourly_rate || 14.50));
+        if (s.status !== 'approved_admin') pendingCount++;
+      });
+
+      document.getElementById('stat-admin-hours').innerText = `${(totalMins / 60).toFixed(1)} u`;
+      document.getElementById('stat-admin-cost').innerText = `€ ${totalCost.toFixed(2)}`;
+      document.getElementById('stat-admin-pending').innerText = pendingCount;
+      document.getElementById('stat-admin-team').innerText = employees.length;
+    }
+
+    // -------------------------------------------------------------
+    // SHIFTS OVERZICHT MET BEWERKOPTIES
+    // -------------------------------------------------------------
+    function renderShiftsTable() {
+      const filter = document.getElementById('filter-employee').value;
+      const tbody = document.getElementById('shifts-tbody');
+
+      let list = shifts;
+      if (currentEmployee.role !== 'admin') {
+        list = list.filter(s => s.employee_id === currentEmployee.id);
+      } else if (filter !== 'all') {
+        list = list.filter(s => s.employee_id === filter);
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-500 text-xs">Geen diensten gevonden</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(s => {
+        const start = new Date(s.start_time);
+        const end = new Date(s.end_time);
+        const dateStr = start.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeStr = `${start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+        
+        const netMinutes = Math.max(0, ((end - start) / 60000) - (s.break_minutes || 0));
+        const hours = (netMinutes / 60).toFixed(2);
+        const cost = (parseFloat(hours) * (s.hourly_rate || 14.50)).toFixed(2);
+
+        let statusBadge = '';
+        let actionButtons = '';
+
+        if (s.status === 'approved_admin') {
+          statusBadge = `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">✓ Definitief Akkoord</span>`;
+        } else if (s.status === 'approved_emp') {
+          statusBadge = `<span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded text-[10px] font-bold">Medewerker akkoord</span>`;
+        } else {
+          statusBadge = `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-bold">In afwachting</span>`;
+        }
+
+        // Knoppen opbouwen
+        if (currentEmployee.role === 'admin') {
+          // ADMIN: Kan altijd bewerken, bevestigen en verwijderen
+          actionButtons = `
+            <button onclick="editShift('${s.id}')" title="Dienst Wijzigen" class="bg-sky-600/80 hover:bg-sky-600 text-white px-2 py-1 rounded text-[10px] font-bold mr-1.5 transition">Wijzigen</button>
+            ${s.status !== 'approved_admin' ? `<button onclick="adminApproveShift('${s.id}')" title="Definitief Goedkeuren" class="bg-emerald-600/80 hover:bg-emerald-600 text-white px-2 py-1 rounded text-[10px] font-bold mr-1.5 transition">Bevestigen</button>` : ''}
+            <button onclick="deleteShift('${s.id}')" title="Verwijderen" class="text-rose-400 hover:text-rose-300 font-bold px-1 transition">✕</button>
+          `;
+        } else {
+          // MEDEWERKER: Kan bewerken en akkoord geven ZOLANG de beheerder nog niet definitief akkoord heeft gegeven
+          if (s.status !== 'approved_admin') {
+            actionButtons = `
+              <button onclick="editShift('${s.id}')" title="Uren Aanpassen" class="bg-sky-600/80 hover:bg-sky-600 text-white px-2 py-1 rounded text-[10px] font-bold mr-1.5 transition">Wijzigen</button>
+              ${s.status === 'pending' ? `<button onclick="employeeApproveShift('${s.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded text-[10px] font-bold transition">Akkoord geven</button>` : `<span class="text-indigo-400 text-[10px]">Wacht op admin</span>`}
+            `;
+          } else {
+            actionButtons = `<span class="text-slate-500 text-[10px]">Vergrendeld</span>`;
+          }
+        }
+
+        return `
+          <tr class="hover:bg-slate-700/30 transition">
+            <td class="py-3 px-3 font-medium text-slate-200">${s.employee_name}</td>
+            <td class="py-3 px-3 text-slate-400">${dateStr}</td>
+            <td class="py-3 px-3 text-slate-300">${timeStr}</td>
+            <td class="py-3 px-3 text-slate-400">${s.break_minutes || 0}m</td>
+            <td class="py-3 px-3 font-semibold text-slate-100">${hours} u</td>
+            <td class="py-3 px-3 font-mono text-emerald-400">€ ${cost}</td>
+            <td class="py-3 px-3">${statusBadge}</td>
+            <td class="py-3 px-3 text-right no-print">${actionButtons}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderEmployeeFilter() {
+      const select = document.getElementById('filter-employee');
+      if (currentEmployee.role !== 'admin') {
+        select.classList.add('hidden');
+        return;
+      }
+      select.classList.remove('hidden');
+      select.innerHTML = `<option value="all">Alle medewerkers</option>` + 
+        employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    }
+
+    async function employeeApproveShift(id) {
+      const shift = shifts.find(s => s.id === id);
+      if (!shift || shift.employee_id !== currentEmployee.id) return;
+      shift.status = 'approved_emp';
+
+      if (isCloud && supabaseClient) {
+        await supabaseClient.from('shifts').update({ status: 'approved_emp' }).eq('id', id);
+      }
+      persistLocal();
+      renderAllViews();
+    }
+
+    async function adminApproveShift(id) {
+      if (currentEmployee.role !== 'admin') return;
+      const shift = shifts.find(s => s.id === id);
+      if (!shift) return;
+      shift.status = 'approved_admin';
+
+      if (isCloud && supabaseClient) {
+        await supabaseClient.from('shifts').update({ status: 'approved_admin' }).eq('id', id);
+      }
+      persistLocal();
+      renderAllViews();
+    }
+
+    async function deleteShift(id) {
+      if (currentEmployee.role !== 'admin') {
+        alert("Alleen een beheerder kan geregistreerde diensten verwijderen.");
+        return;
+      }
+      if (!confirm("Weet je zeker dat je deze dienst wilt verwijderen?")) return;
+      shifts = shifts.filter(s => s.id !== id);
+
+      if (isCloud && supabaseClient) {
+        await supabaseClient.from('shifts').delete().eq('id', id);
+      }
+      persistLocal();
+      renderAllViews();
+    }
+
+    // -------------------------------------------------------------
+    // DIENST TOEVOEGEN & WIJZIGEN
+    // -------------------------------------------------------------
+    function openShiftModal(prefilledDate = null) {
+      document.getElementById('editing-shift-id').value = "";
+      document.getElementById('shift-modal-title').innerText = "Dienst Invoeren";
+      document.getElementById('shift-modal-subtitle').innerText = "Voer uren in voor vandaag of een eerdere datum.";
+      document.getElementById('shift-modal-submit-btn').innerText = "Opslaan";
+
+      document.getElementById('man-date').value = prefilledDate || new Date().toISOString().split('T')[0];
+      document.getElementById('man-start').value = "09:00";
+      document.getElementById('man-end').value = "17:30";
+      document.getElementById('man-break').value = "30";
+      document.getElementById('man-notes').value = "";
+
+      const adminContainer = document.getElementById('shift-for-employee-container');
+      const empSelect = document.getElementById('man-emp-select');
+
+      if (currentEmployee.role === 'admin') {
+        adminContainer.classList.remove('hidden');
+        empSelect.innerHTML = employees.map(e => `
+          <option value="${e.id}" ${e.id === currentEmployee.id ? 'selected' : ''}>${e.name}</option>
+        `).join('');
+      } else {
+        adminContainer.classList.add('hidden');
+      }
+
+      document.getElementById('modal-shift').classList.remove('hidden');
+    }
+
+    function editShift(id) {
+      const shift = shifts.find(s => s.id === id);
+      if (!shift) return;
+
+      // Toegangscontrole: mag de gebruiker deze shift wijzigen?
+      if (currentEmployee.role !== 'admin') {
+        if (shift.employee_id !== currentEmployee.id) {
+          return alert("Je kunt alleen je eigen uren wijzigen.");
+        }
+        if (shift.status === 'approved_admin') {
+          return alert("Deze dienst is al definitief goedgekeurd door de beheerder en kan niet meer gewijzigd worden.");
+        }
+      }
+
+      document.getElementById('editing-shift-id').value = shift.id;
+      document.getElementById('shift-modal-title').innerText = "Dienst Wijzigen";
+      document.getElementById('shift-modal-subtitle').innerText = "Pas de tijden of pauze van deze dienst aan.";
+      document.getElementById('shift-modal-submit-btn').innerText = "Wijziging Opslaan";
+
+      const start = new Date(shift.start_time);
+      const end = new Date(shift.end_time);
+
+      document.getElementById('man-date').value = shift.start_time.split('T')[0];
+      document.getElementById('man-start').value = start.toTimeString().slice(0, 5);
+      document.getElementById('man-end').value = end.toTimeString().slice(0, 5);
+      document.getElementById('man-break').value = shift.break_minutes || 0;
+      document.getElementById('man-notes').value = shift.notes || '';
+
+      const adminContainer = document.getElementById('shift-for-employee-container');
+      const empSelect = document.getElementById('man-emp-select');
+
+      if (currentEmployee.role === 'admin') {
+        adminContainer.classList.remove('hidden');
+        empSelect.innerHTML = employees.map(e => `
+          <option value="${e.id}" ${e.id === shift.employee_id ? 'selected' : ''}>${e.name}</option>
+        `).join('');
+      } else {
+        adminContainer.classList.add('hidden');
+      }
+
+      document.getElementById('modal-shift').classList.remove('hidden');
+    }
+
+    function closeShiftModal() { 
+      document.getElementById('modal-shift').classList.add('hidden'); 
+    }
+
+    async function submitManualShift() {
+      const editingId = document.getElementById('editing-shift-id').value;
+      const date = document.getElementById('man-date').value;
+      const start = document.getElementById('man-start').value;
+      const end = document.getElementById('man-end').value;
+      const breakMin = parseInt(document.getElementById('man-break').value) || 0;
+      const notes = document.getElementById('man-notes').value;
+
+      if (!date || !start || !end) return alert("Vul een datum, starttijd en eindtijd in.");
+
+      let targetEmployee = currentEmployee;
+      if (currentEmployee.role === 'admin') {
+        const selectedId = document.getElementById('man-emp-select').value;
+        targetEmployee = employees.find(e => e.id === selectedId) || currentEmployee;
+      }
+
+      const startTime = new Date(`${date}T${start}`).toISOString();
+      const endTime = new Date(`${date}T${end}`).toISOString();
+
+      if (editingId) {
+        // --- WIJZIGEN VAN BESTAANDE SHIFT ---
+        const shift = shifts.find(s => s.id === editingId);
+        if (!shift) return;
+
+        shift.employee_id = targetEmployee.id;
+        shift.employee_name = targetEmployee.name;
+        shift.start_time = startTime;
+        shift.end_time = endTime;
+        shift.break_minutes = breakMin;
+        shift.notes = notes;
+        shift.hourly_rate = targetEmployee.rate;
+
+        // Als een medewerker bewerkt, springt de status terug naar 'pending' zodat de flow klopt
+        if (currentEmployee.role !== 'admin') {
+          shift.status = 'pending';
+        }
+
+        if (isCloud && supabaseClient) {
+          const { error: updErr } = await supabaseClient.from('shifts').update({
+            employee_id: targetEmployee.id,
+            employee_name: targetEmployee.name,
+            start_time: startTime,
+            end_time: endTime,
+            break_minutes: breakMin,
+            notes: notes,
+            hourly_rate: targetEmployee.rate,
+            status: shift.status
+          }).eq('id', editingId);
+
+          if (updErr) {
+            alert("Supabase Fout bij bijwerken: " + updErr.message);
+            return;
+          }
+        }
+      } else {
+        // --- NIEUWE SHIFT TOEVOEGEN ---
+        const newShift = {
+          id: 'shf_' + String(Date.now()),
+          employee_id: targetEmployee.id,
+          employee_name: targetEmployee.name,
+          start_time: startTime,
+          end_time: endTime,
+          break_minutes: breakMin,
+          hourly_rate: targetEmployee.rate,
+          notes: notes,
+          status: currentEmployee.role === 'admin' ? 'approved_admin' : 'pending'
+        };
+
+        if (isCloud && supabaseClient) {
+          const { error: insErr } = await supabaseClient.from('shifts').insert([newShift]);
+          if (insErr) {
+            alert("Supabase Fout bij shift toevoegen: " + insErr.message);
+            return;
+          }
+        }
+
+        shifts.unshift(newShift);
+      }
+
+      persistLocal();
+      closeShiftModal();
+      renderAllViews();
+    }
+
+    // -------------------------------------------------------------
+    // GEBRUIKERS SELECTIE EN SWITCH LOGICA
+    // -------------------------------------------------------------
+    function openUserModal() {
+      const list = document.getElementById('employee-selection-list');
+      list.innerHTML = employees.map(e => {
+        const isSelected = currentEmployee && e.id === currentEmployee.id;
+        return `
+          <div onclick="requestUserSwitch('${e.id}')" class="flex items-center justify-between p-2.5 rounded-xl border ${isSelected ? 'border-indigo-500 bg-indigo-950/30' : 'border-slate-700/60 bg-slate-900/40'} hover:border-indigo-500/60 hover:bg-slate-700/40 cursor-pointer transition">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs">${e.name.charAt(0)}</div>
+              <div>
+                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                  ${e.name}
+                  ${e.role === 'admin' ? '<span class="text-[10px] text-indigo-400">🔒</span>' : ''}
+                </div>
+                <div class="text-[10px] text-slate-400">${e.role === 'admin' ? 'Beheerder' : 'Medewerker'}</div>
+              </div>
+            </div>
+            ${isSelected ? '<span class="text-xs text-indigo-400 font-bold">Geselecteerd</span>' : ''}
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('modal-user').classList.remove('hidden');
+    }
+
+    function closeUserModal() { 
+      document.getElementById('modal-user').classList.add('hidden'); 
+    }
+
+    function requestUserSwitch(id) {
+      const target = employees.find(e => e.id === id);
+      if (!target) return;
+
+      if (currentEmployee && currentEmployee.id === target.id) {
+        closeUserModal();
+        return;
+      }
+
+      if (target.role === 'admin') {
+        pendingTargetUserId = id;
+        document.getElementById('input-admin-pin').value = '';
+        closeUserModal();
+        document.getElementById('modal-pin-prompt').classList.remove('hidden');
+        setTimeout(() => document.getElementById('input-admin-pin').focus(), 100);
+      } else {
+        applyUserSwitch(id);
+      }
+    }
+
+    function closePinPromptModal() {
+      pendingTargetUserId = null;
+      document.getElementById('modal-pin-prompt').classList.add('hidden');
+    }
+
+    function verifyAdminPin() {
+      const enteredPin = document.getElementById('input-admin-pin').value.trim();
+      const target = employees.find(e => e.id === pendingTargetUserId);
+      if (!target) return;
+
+      const validPin = target.pin || '0000';
+
+      if (enteredPin === validPin) {
+        const idToApply = pendingTargetUserId;
+        closePinPromptModal();
+        applyUserSwitch(idToApply);
+      } else {
+        alert("Onjuiste pincode. Probeer het opnieuw.");
+        document.getElementById('input-admin-pin').value = '';
+        document.getElementById('input-admin-pin').focus();
+      }
+    }
+
+    function applyUserSwitch(id) {
+      const target = employees.find(e => e.id === id);
+      if (!target) return;
+
+      currentEmployee = target;
+      localStorage.setItem('current_user_id', id);
+
+      closeUserModal();
+      updateUserInterface();
+      renderAllViews();
+      startLiveTicker();
+    }
+
+    function openChangePinModal() {
+      if (currentEmployee.role !== 'admin') return;
+      document.getElementById('pin-current').value = '';
+      document.getElementById('pin-new').value = '';
+      document.getElementById('modal-change-pin').classList.remove('hidden');
+    }
+    function closeChangePinModal() { document.getElementById('modal-change-pin').classList.add('hidden'); }
+
+    async function saveNewAdminPin() {
+      const curr = document.getElementById('pin-current').value.trim();
+      const next = document.getElementById('pin-new').value.trim();
+
+      const existingPin = currentEmployee.pin || '0000';
+      if (curr !== existingPin) {
+        return alert("Huidige pincode is onjuist.");
+      }
+      if (next.length !== 4 || isNaN(next)) {
+        return alert("Voer een geldige 4-cijferige pincode in (bijv. 1234).");
+      }
+
+      currentEmployee.pin = next;
+
+      if (isCloud && supabaseClient) {
+        const { error: pinErr } = await supabaseClient.from('employees').update({ pin: next }).eq('id', currentEmployee.id);
+        if (pinErr) return alert("Fout bij bijwerken pin: " + pinErr.message);
+      }
+      persistLocal();
+      closeChangePinModal();
+      alert("Pincode succesvol gewijzigd!");
+    }
+
+    async function promptResetPin() {
+      const target = employees.find(e => e.id === (pendingTargetUserId || 'emp_admin'));
+      if (!target) return;
+
+      const confirmation = prompt("Voer ter verificatie je Supabase Project URL in om de pincode te resetten naar '0000':\n(Bijv: https://dzxwmljskmlquqnhidlc.supabase.co)");
+      if (!confirmation) return;
+
+      const configuredUrl = localStorage.getItem('sb_url') || DEFAULT_SUPABASE_URL;
+
+      if (confirmation.trim().toLowerCase() === configuredUrl.trim().toLowerCase()) {
+        target.pin = '0000';
+        if (isCloud && supabaseClient) {
+          await supabaseClient.from('employees').update({ pin: '0000' }).eq('id', target.id);
+        }
+        persistLocal();
+        alert("Pincode is succesvol gereset naar: 0000");
+        closePinPromptModal();
+      } else {
+        alert("Verificatie mislukt. De ingevoerde URL komt niet overeen.");
+      }
+    }
+
+    async function addNewEmployee() {
+      if (currentEmployee.role !== 'admin') {
+        alert("Alleen beheerders mogen medewerkers aanmaken.");
+        return;
+      }
+
+      const nameInput = document.getElementById('new-emp-name');
+      const rateInput = document.getElementById('new-emp-rate');
+      const adminInput = document.getElementById('new-emp-admin');
+
+      const name = nameInput.value.trim();
+      const rate = parseFloat(rateInput.value) || 14.50;
+      const isAdmin = adminInput.checked;
+
+      if (!name) return alert("Vul een naam in.");
+
+      const newEmp = {
+        id: 'emp_' + String(Date.now()),
+        name: name,
+        role: isAdmin ? 'admin' : 'employee',
+        rate: rate,
+        pin: '0000',
+        active: true
+      };
+
+      if (isCloud && supabaseClient) {
+        const { error } = await supabaseClient.from('employees').insert([newEmp]);
+        if (error) {
+          alert("Supabase Fout: " + error.message + " (Code: " + error.code + ")");
+          return;
+        }
+      }
+
+      employees.push(newEmp);
+      persistLocal();
+
+      nameInput.value = '';
+      rateInput.value = '';
+      adminInput.checked = false;
+
+      openUserModal();
+      renderEmployeeFilter();
+      renderAdminDashboard();
+      alert("Medewerker succesvol opgeslagen in de cloud!");
+    }
+
+    function openConfigModal() {
+      if (currentEmployee.role !== 'admin') return;
+      document.getElementById('cfg-supabase-url').value = localStorage.getItem('sb_url') || DEFAULT_SUPABASE_URL;
+      document.getElementById('cfg-supabase-key').value = localStorage.getItem('sb_key') || DEFAULT_SUPABASE_KEY;
+      document.getElementById('modal-config').classList.remove('hidden');
+    }
+    function closeConfigModal() { document.getElementById('modal-config').classList.add('hidden'); }
+
+    function saveConfig() {
+      const url = document.getElementById('cfg-supabase-url').value.trim();
+      const key = document.getElementById('cfg-supabase-key').value.trim();
+
+      if (url && key) {
+        localStorage.setItem('sb_url', url);
+        localStorage.setItem('sb_key', key);
+        closeConfigModal();
+        initDatabase();
+        loadInitialData();
+      } else {
+        alert("Vul beide velden in.");
+      }
+    }
+
+    function clearConfig() {
+      localStorage.removeItem('sb_url');
+      localStorage.removeItem('sb_key');
+      closeConfigModal();
+      isCloud = false;
+      loadInitialData();
+    }
+
+    function persistLocal() {
+      localStorage.setItem('local_employees', JSON.stringify(employees));
+      localStorage.setItem('local_shifts', JSON.stringify(shifts));
+      localStorage.setItem('local_timers', JSON.stringify(activeTimers));
+    }
+
+    function exportCSV() {
+      if (currentEmployee.role !== 'admin') return;
+      let rows = [["Medewerker", "Datum", "Start", "Eind", "Pauze (min)", "Netto Uren", "Uurloon", "Bedrag", "Status", "Notitie"]];
+      
+      shifts.forEach(s => {
+        const start = new Date(s.start_time);
+        const end = new Date(s.end_time);
+        const dur = (end - start) / 60000;
+        const netHours = (Math.max(0, dur - (s.break_minutes || 0)) / 60).toFixed(2);
+        const cost = (parseFloat(netHours) * (s.hourly_rate || 14.50)).toFixed(2);
+
+        rows.push([
+          s.employee_name,
+          start.toISOString().split('T')[0],
+          start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+          end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+          s.break_minutes || 0,
+          netHours,
+          s.hourly_rate || 14.50,
+          cost,
+          s.status,
+          `"${(s.notes || '').replace(/"/g, '""')}"`
+        ]);
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `urenregistratie_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
